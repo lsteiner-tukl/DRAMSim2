@@ -1,0 +1,2 @@
+./DRAMSim -t traces/k6_aoe_02_short.trc -s system.ini -d ini/DDR3_custom.ini -c 1000 -S 1024
+./DRAMSim -t benchmarks/mediabench0.stl -s system.ini -d ini/DDR3_custom.ini -S 1024 -q -c 1

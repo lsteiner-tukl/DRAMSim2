@@ -41,6 +41,7 @@
 #include <getopt.h>
 #include <map>
 #include <list>
+#include <chrono>
 
 #include "SystemConfiguration.h"
 #include "MemorySystem.h"
@@ -164,27 +165,37 @@ void *parseTraceFileLine(string &line, uint64_t &addr, enum TransactionType &tra
 	{
 	case k6:
 	{
-		spaceIndex = line.find_first_of(" ", 0);
+		spaceIndex = line.find_first_of(":", 0);
 
-		addressStr = line.substr(0, spaceIndex);
-		previousIndex = spaceIndex;
+		ccStr = line.substr(0, spaceIndex);
+		previousIndex = spaceIndex + 1;
 
-		spaceIndex = line.find_first_not_of(" ", previousIndex);
-		cmdStr = line.substr(spaceIndex, line.find_first_of(" ", spaceIndex) - spaceIndex);
-		previousIndex = line.find_first_of(" ", spaceIndex);
+		spaceIndex = line.find_first_not_of("\t", previousIndex);
+		cmdStr = line.substr(spaceIndex, line.find_first_of("\t", spaceIndex) - spaceIndex);
+		previousIndex = line.find_first_of("\t", spaceIndex);
 
-		spaceIndex = line.find_first_not_of(" ", previousIndex);
-		ccStr = line.substr(spaceIndex, line.find_first_of(" ", spaceIndex) - spaceIndex);
+		spaceIndex = line.find_first_not_of("\n", previousIndex);
+		addressStr = line.substr(spaceIndex + 1, line.find_first_of("\n", spaceIndex) - spaceIndex);
+		
+		//-----------------------------------------------------------------------------------
+		
+		// spaceIndex = line.find_first_of(" ", 0);
 
-		if (cmdStr.compare("P_MEM_WR")==0 ||
-		        cmdStr.compare("BOFF")==0)
+		// addressStr = line.substr(0, spaceIndex);
+		// previousIndex = spaceIndex;
+
+		// spaceIndex = line.find_first_not_of(" ", previousIndex);
+		// cmdStr = line.substr(spaceIndex, line.find_first_of(" ", spaceIndex) - spaceIndex);
+		// previousIndex = line.find_first_of(" ", spaceIndex);
+
+		// spaceIndex = line.find_first_not_of(" ", previousIndex);
+		// ccStr = line.substr(spaceIndex, line.find_first_of(" ", spaceIndex) - spaceIndex);
+
+		if (cmdStr.compare("write")==0)
 		{
 			transType = DATA_WRITE;
 		}
-		else if (cmdStr.compare("P_FETCH")==0 ||
-		         cmdStr.compare("P_MEM_RD")==0 ||
-		         cmdStr.compare("P_LOCK_RD")==0 ||
-		         cmdStr.compare("P_LOCK_WR")==0)
+		else if (cmdStr.compare("read")==0)
 		{
 			transType = DATA_READ;
 		}
@@ -203,6 +214,7 @@ void *parseTraceFileLine(string &line, uint64_t &addr, enum TransactionType &tra
 		{
 			istringstream b(ccStr);
 			b>>clockCycle;
+			//std::cout << addr << " " << clockCycle << std::endl;
 		}
 		break;
 	}
@@ -294,7 +306,8 @@ void *parseTraceFileLine(string &line, uint64_t &addr, enum TransactionType &tra
 		//parse data
 		//if we are running in a no storage mode, don't allocate space, just return NULL
 #ifndef NO_STORAGE
-		if (dataStr.size() > 0 && transType == DATA_WRITE)
+		std::cout << "Storage will be used" << std::endl;
+        if (dataStr.size() > 0 && transType == DATA_WRITE)
 		{
 			// 32 bytes of data per transaction
 			dataBuffer = (uint64_t *)calloc(sizeof(uint64_t),4);
@@ -463,27 +476,28 @@ int main(int argc, char **argv)
 	}
 
 	// get the trace filename
-	string temp = traceFileName.substr(traceFileName.find_last_of("/")+1);
+	//string temp = traceFileName.substr(traceFileName.find_last_of("/")+1);
 
 	//get the prefix of the trace name
-	temp = temp.substr(0,temp.find_first_of("_"));
-	if (temp=="mase")
-	{
-		traceType = mase;
-	}
-	else if (temp=="k6")
-	{
-		traceType = k6;
-	}
-	else if (temp=="misc")
-	{
-		traceType = misc;
-	}
-	else
-	{
-		ERROR("== Unknown Tracefile Type : "<<temp);
-		exit(0);
-	}
+	// temp = temp.substr(0,temp.find_first_of("_"));
+	// if (temp=="mase")
+	// {
+		// traceType = mase;
+	// }
+	// else if (temp=="k6")
+	// {
+		// traceType = k6;
+	// }
+	// else if (temp=="misc")
+	// {
+		// traceType = misc;
+	// }
+	// else
+	// {
+		// ERROR("== Unknown Tracefile Type : "<<temp);
+		// exit(0);
+	// }
+	traceType = k6;
 
 
 	// no default value for the default model name
@@ -540,8 +554,9 @@ int main(int argc, char **argv)
 		cout << "== Error - Could not open trace file"<<endl;
 		exit(0);
 	}
-
-	for (size_t i=0;i<numCycles;i++)
+	size_t i;
+	auto start = std::chrono::high_resolution_clock::now();
+	for (i=0;true;i++)
 	{
 		if (!pendingTrans)
 		{
@@ -585,6 +600,7 @@ int main(int argc, char **argv)
 			{
 				//we're out of trace, set pending=false and let the thing spin without adding transactions
 				pendingTrans = false; 
+				break;
 			}
 		}
 
@@ -602,6 +618,13 @@ int main(int argc, char **argv)
 
 		(*memorySystem).update();
 	}
+	
+	auto finish = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = finish - start;
+    std::cout << elapsed.count() << ", " << std::fixed << i * 1.25;
+	//std::cout << elapsed.count();
+	
+	//std::cerr << "Simulated time: " << std::fixed << i * 1.25 << std::endl;
 
 	traceFile.close();
 	memorySystem->printStats(true);
