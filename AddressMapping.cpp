@@ -236,17 +236,12 @@ void addressMapping(uint64_t physicalAddress, unsigned &newTransactionChan, unsi
 	}
 	else if (addressMappingScheme == Scheme6)
 	{
-		//chan:row:bank:rank:col
+		//chan:rank:row:bank:col
 
 		tempA = physicalAddress;
 		physicalAddress = physicalAddress >> colHighBitWidth;
 		tempB = physicalAddress << colHighBitWidth;
 		newTransactionColumn = tempA ^ tempB;
-
-		tempA = physicalAddress;
-		physicalAddress = physicalAddress >> rankBitWidth;
-		tempB = physicalAddress << rankBitWidth;
-		newTransactionRank = tempA ^ tempB;
 
 		tempA = physicalAddress;
 		physicalAddress = physicalAddress >> bankBitWidth;
@@ -257,6 +252,11 @@ void addressMapping(uint64_t physicalAddress, unsigned &newTransactionChan, unsi
 		physicalAddress = physicalAddress >> rowBitWidth;
 		tempB = physicalAddress << rowBitWidth;
 		newTransactionRow = tempA ^ tempB;
+        
+        tempA = physicalAddress;
+		physicalAddress = physicalAddress >> rankBitWidth;
+		tempB = physicalAddress << rankBitWidth;
+		newTransactionRank = tempA ^ tempB;
 
 		tempA = physicalAddress;
 		physicalAddress = physicalAddress >> channelBitWidth;
