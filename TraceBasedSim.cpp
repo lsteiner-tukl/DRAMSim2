@@ -621,7 +621,7 @@ int main(int argc, char **argv)
 	
 	auto finish = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed = finish - start;
-    std::cout << elapsed.count() << ", " << std::fixed << i * 1.25;
+    std::cout << "Simulated wc time: " << elapsed.count() << ", simulated cycles: " << i << std::endl;
 	//std::cout << elapsed.count();
 	
 	//std::cerr << "Simulated time: " << std::fixed << i * 1.25 << std::endl;
